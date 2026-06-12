@@ -11,12 +11,20 @@ def compact(params: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in params.items() if value is not None}
 
 
+def normalize_forward_params(tool_name: str, backend_command: str, params: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(params)
+    if backend_command == "set_actor_property" and "value" in normalized and "property_value" not in normalized:
+        normalized["property_value"] = normalized.pop("value")
+    return normalized
+
+
 def forward(tool_name: str, params: dict[str, Any], command: str | None = None, port: int | None = None) -> dict[str, Any]:
     target_port, target_command = route_for(tool_name)
     target_port = port if port is not None else target_port
     target_command = command or target_command
+    normalized_params = normalize_forward_params(tool_name, target_command, params)
     try:
-        return pool.send(target_port, target_command, compact(params))
+        return pool.send(target_port, target_command, compact(normalized_params))
     except BackendError as exc:
         return {
             "status": "error",
@@ -61,4 +69,3 @@ def forward_set_pin(mode: str, params: dict[str, Any]) -> dict[str, Any]:
 
 def as_json_text(result: dict[str, Any]) -> str:
     return json.dumps(result, ensure_ascii=False, indent=2)
-

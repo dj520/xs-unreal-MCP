@@ -41,6 +41,20 @@ Rechecked against the running Unreal Editor on 2026-06-13:
 | Compile after replace | Pass | `compile_blueprint` on port `55557` returned `success=true` and `status="compiled successfully"`. |
 | Temporary graph-op asset cleanup | Pass | `delete_asset` removed `/Game/Blueprints/BP_XSMCP_GraphOps_20260613_044209`; no matching `.uasset` remained on disk. |
 
+## Full Live Validation Recheck
+
+Rechecked against the running Unreal Editor on 2026-06-13 with `scripts/live_validate_unreal.py`.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Overall live suite | Partial pass | Latest local report: `generated/live_validation_20260613_060941/live_validation_20260613_060941.json`; summary was `pass=80`, `blocked=1`, `fail=1`. |
+| Slim profile live operations | Pass | All 22 public slim tools were exercised through the active UE backends; graph and actor operations produced 24 pass steps including setup variations. |
+| Blueprint graph operations | Pass | `connect_blueprint_nodes`, `set_node_pin_default`, `disconnect_node`, `replace_node`, `delete_blueprint_node`, `auto_arrange_nodes`, `cleanup_blueprint_graph`, and `compile_blueprint` all passed on a disposable Blueprint. |
+| Actor operations | Pass | `spawn_actor`, `get_level_metadata`, `set_actor_transform`, `set_actor_property`, and `delete_actor` all passed. |
+| Extended domain smoke checks | Pass | Blueprint Action, Project, DataTable, Editor, Material, Mesh, Niagara create/metadata, PCG, Sound import/cue/compile, StateTree, UMG create/component/metadata, Font, and Animation create/metadata smoke checks passed. |
+| Source command audit | Fail | Current UE plugin source did not register two upstream sound commands exposed by the extended profile: `play_sound_at_location` and `set_attenuation_property`. |
+| Niagara compile smoke check | Blocked | The validation script intentionally creates a minimal empty Niagara System; the backend correctly rejected compilation because required modules/renderers were missing. |
+
 ## Extended Profile Checks
 
 | Check | Result | Evidence |

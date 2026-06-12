@@ -10,6 +10,11 @@ FORBIDDEN_PARTS = {
     "Intermediate",
     "DerivedDataCache",
 }
+SKIPPED_PARTS = {
+    ".git",
+    "__pycache__",
+    "generated",
+}
 FORBIDDEN_TEXT = [
     "".join(["D:/", "Xs", "Game", "_Sc", "_dev08"]),
     "".join(["D:\\", "Xs", "Game", "_Sc", "_dev08"]),
@@ -22,6 +27,8 @@ def main() -> int:
     failures: list[str] = []
     for path in ROOT.rglob("*"):
         rel = path.relative_to(ROOT)
+        if any(part in SKIPPED_PARTS for part in rel.parts):
+            continue
         if any(part in FORBIDDEN_PARTS for part in rel.parts):
             failures.append(f"forbidden path segment: {rel}")
         if path.suffix.lower() in FORBIDDEN_EXTENSIONS:

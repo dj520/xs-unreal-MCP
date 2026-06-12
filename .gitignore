@@ -24,4 +24,4 @@ Saved/
 
 # Local logs
 *.log
-
+generated/

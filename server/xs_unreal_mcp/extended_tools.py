@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from .backend import BackendError, pool
@@ -154,7 +155,7 @@ EXTENDED_TOOL_SPECS = [
         name='blueprint_action_inspect_node_pin_connection',
         domain='blueprint_action',
         upstream_tool='inspect_node_pin_connection',
-        backend_command='inspect_node_pin_connection',
+        backend_command='get_node_pin_info',
         source_server='blueprint_action_mcp_server',
         source_file='blueprint_action_tools/blueprint_action_tools.py',
         description='Inspect Blueprint node pin connection details including expected types and compatibility info.',
@@ -464,7 +465,7 @@ EXTENDED_TOOL_SPECS = [
         name='editor_delete_actors',
         domain='editor',
         upstream_tool='delete_actors',
-        backend_command='delete_actors',
+        backend_command='batch_delete_actors',
         source_server='editor_mcp_server',
         source_file='editor_tools/editor_tools.py',
         description='Delete multiple actors by name in a single operation.',
@@ -474,7 +475,7 @@ EXTENDED_TOOL_SPECS = [
         name='editor_spawn_actors',
         domain='editor',
         upstream_tool='spawn_actors',
-        backend_command='spawn_actors',
+        backend_command='batch_spawn_actors',
         source_server='editor_mcp_server',
         source_file='editor_tools/editor_tools.py',
         description='Spawn multiple actors in a single operation.',
@@ -2747,6 +2748,11 @@ PROFILE_ALIASES = {
     'all_tools': 'all',
 }
 
+LOCAL_BACKEND_COMMANDS = {
+    'create_parent_and_child_widget_components',
+    'get_mcp_help',
+}
+
 def normalize_profile(profile: str) -> str:
     profile = profile.lower().strip()
     return PROFILE_ALIASES.get(profile, profile)
@@ -2765,10 +2771,128 @@ def extended_tool_counts() -> dict[str, int]:
 def _extended_port() -> int:
     return int(os.getenv("XS_MCP_EXTENDED_PORT", str(UNREAL_MCP_PORT)))
 
+def normalize_extended_params(spec: ExtendedToolSpec, params: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(params)
+    if spec.backend_command == "create_umg_widget_blueprint" and "widget_name" in normalized and "name" not in normalized:
+        normalized["name"] = normalized["widget_name"]
+    if spec.backend_command in {"add_widget_component_to_widget", "add_child_widget_component_to_parent"}:
+        if "widget_name" in normalized and "blueprint_name" not in normalized:
+            normalized["blueprint_name"] = normalized["widget_name"]
+    if spec.backend_command == "add_widget_component_to_widget" and "properties" in normalized and "kwargs" not in normalized:
+        normalized["kwargs"] = json.dumps(normalized["properties"], ensure_ascii=False)
+    return normalized
+
+def local_get_mcp_help(params: dict[str, Any]) -> dict[str, Any]:
+    tool_name = params.get("tool_name")
+    include_full_docstring = bool(params.get("include_full_docstring"))
+    specs = EXTENDED_TOOL_SPECS
+    if tool_name:
+        needle = str(tool_name).lower()
+        specs = [
+            spec
+            for spec in EXTENDED_TOOL_SPECS
+            if needle in spec.name.lower()
+            or needle in spec.upstream_tool.lower()
+            or needle in spec.backend_command.lower()
+            or needle in spec.domain.lower()
+        ]
+
+    tools = []
+    for spec in specs:
+        item = asdict(spec)
+        if include_full_docstring:
+            item["doc"] = _tool_description(spec)
+        tools.append(item)
+
+    return {
+        "status": "success",
+        "success": True,
+        "tool_count": len(tools),
+        "tools": tools,
+    }
+
+def _backend_success(response: dict[str, Any]) -> bool:
+    if response.get("status") == "error":
+        return False
+    body = response.get("result", response)
+    return not (isinstance(body, dict) and body.get("success") is False)
+
+def local_create_parent_and_child_widget_components(target_port: int, params: dict[str, Any]) -> dict[str, Any]:
+    widget_name = params.get("widget_name") or params.get("blueprint_name")
+    parent_name = params.get("parent_component_name")
+    child_name = params.get("child_component_name")
+    if not widget_name or not parent_name or not child_name:
+        return {
+            "status": "error",
+            "error": "widget_name/blueprint_name, parent_component_name, and child_component_name are required",
+        }
+
+    parent_params = {
+        "blueprint_name": widget_name,
+        "component_name": parent_name,
+        "component_type": params.get("parent_component_type", "Border"),
+        "position": params.get("parent_position", [0.0, 0.0]),
+        "size": params.get("parent_size", [300.0, 200.0]),
+    }
+    parent_result = pool.send(target_port, "add_widget_component_to_widget", compact(parent_params))
+    if not _backend_success(parent_result):
+        return {"status": "error", "error": "failed to create parent widget component", "stage": "parent", "response": parent_result}
+
+    child_params = {
+        "blueprint_name": widget_name,
+        "component_name": child_name,
+        "component_type": params.get("child_component_type", "TextBlock"),
+    }
+    child_attributes = params.get("child_attributes")
+    if child_attributes:
+        child_params["kwargs"] = json.dumps(child_attributes, ensure_ascii=False)
+    child_result = pool.send(target_port, "add_widget_component_to_widget", compact(child_params))
+    if not _backend_success(child_result):
+        return {"status": "error", "error": "failed to create child widget component", "stage": "child", "response": child_result}
+
+    attach_params = {
+        "blueprint_name": widget_name,
+        "parent_component_name": parent_name,
+        "child_component_name": child_name,
+        "create_parent_if_missing": False,
+        "parent_component_type": params.get("parent_component_type", "Border"),
+        "parent_position": params.get("parent_position", [0.0, 0.0]),
+        "parent_size": params.get("parent_size", [300.0, 200.0]),
+    }
+    attach_result = pool.send(target_port, "add_child_widget_component_to_parent", compact(attach_params))
+    if not _backend_success(attach_result):
+        return {"status": "error", "error": "failed to attach child widget component", "stage": "attach", "response": attach_result}
+
+    return {
+        "status": "success",
+        "success": True,
+        "blueprint_name": widget_name,
+        "parent_component_name": parent_name,
+        "child_component_name": child_name,
+        "parent_result": parent_result,
+        "child_result": child_result,
+        "attach_result": attach_result,
+    }
+
 def forward_extended(spec: ExtendedToolSpec, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    if spec.backend_command == "get_mcp_help":
+        return local_get_mcp_help(params or {})
     target_port = _extended_port()
+    if spec.backend_command == "create_parent_and_child_widget_components":
+        try:
+            return local_create_parent_and_child_widget_components(target_port, params or {})
+        except BackendError as exc:
+            return {
+                'status': 'error',
+                'error': str(exc),
+                'backend_port': target_port,
+                'backend_command': spec.backend_command,
+                'extended_tool': spec.name,
+                'upstream_tool': spec.upstream_tool,
+            }
+    normalized_params = normalize_extended_params(spec, params or {})
     try:
-        return pool.send(target_port, spec.backend_command, compact(params or {}))
+        return pool.send(target_port, spec.backend_command, compact(normalized_params))
     except BackendError as exc:
         return {
             'status': 'error',
