@@ -41,6 +41,18 @@ Rechecked against the running Unreal Editor on 2026-06-13:
 | Compile after replace | Pass | `compile_blueprint` on port `55557` returned `success=true` and `status="compiled successfully"`. |
 | Temporary graph-op asset cleanup | Pass | `delete_asset` removed `/Game/Blueprints/BP_XSMCP_GraphOps_20260613_044209`; no matching `.uasset` remained on disk. |
 
+## Extended Profile Checks
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| `slim` profile | Pass | `check_slim_tools.py` returned `tool_count=22`. |
+| `all` profile import | Pass | `XS_MCP_PROFILE=all` listed `tool_count=294`, including `material_create_material`, `statetree_create_state_tree`, and `raw_command`. |
+| `fx_material` profile import | Pass | `XS_MCP_PROFILE=fx_material` listed `tool_count=101`, including Material, Niagara, and Sound tools. |
+| Profile contract script | Pass | `check_profiles.py` returned `slim=22`, `full=23`, `blueprint_plus=51`, `editor_plus=86`, `data_ui=82`, `fx_material=101`, `ai_anim=96`, and `all=294`. |
+| Extended source extraction | Pass | Local `D:/project/unreal-mcp` revision `ebc639c` exposed 271 upstream Python MCP tools across 15 server entry points. |
+| UnrealXu skill pack import | Pass | `UnrealXu/UnrealEngine5-Skills` revision `60ac072` was copied under `third_party/unrealengine5-skills` without its `.git` directory. |
+| UnrealXu skill validation | Pass | Text files in the vendored copy were normalized to LF; `validate_skills.py` returned `Validation OK`, `skills checked: 11`. |
+
 ## Notes
 
 - A previously running standalone Blueprint MCP Python server held the single

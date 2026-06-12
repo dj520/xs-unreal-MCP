@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "xs-unreal-all": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "D:/xs-unreal-MCP/server",
+        "run",
+        "xs-unreal-mcp"
+      ],
+      "env": {
+        "XS_MCP_PROFILE": "all",
+        "XS_MCP_HOST": "127.0.0.1",
+        "XS_MCP_UNREAL_PORT": "55557",
+        "XS_MCP_BLUEPRINT_PORT": "55558",
+        "XS_MCP_GRAPH_PORT": "55557",
+        "XS_MCP_EXTENDED_PORT": "55557",
+        "XS_MCP_UNREAL_PROTOCOL": "raw",
+        "XS_MCP_BLUEPRINT_PROTOCOL": "length",
+        "XS_MCP_GRAPH_PROTOCOL": "raw"
+      }
+    }
+  }
+}

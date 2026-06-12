@@ -6,9 +6,11 @@ from typing import Any, Literal
 from mcp.server.fastmcp import FastMCP
 
 from . import __version__
+from .extended_tools import register_extended_tools, selected_specs
 from . import tools as impl
 
 mcp = FastMCP("xs-unreal-MCP")
+PROFILE = os.getenv("XS_MCP_PROFILE", "slim").lower()
 
 
 @mcp.tool()
@@ -250,7 +252,10 @@ def cleanup_graph(
     return impl.forward("cleanup_graph", locals())
 
 
-if os.getenv("XS_MCP_PROFILE", "slim").lower() == "full":
+register_extended_tools(mcp, PROFILE)
+
+
+if PROFILE == "full" or selected_specs(PROFILE) or os.getenv("XS_MCP_ENABLE_RAW", "").lower() in {"1", "true", "yes"}:
 
     @mcp.tool()
     def raw_command(port: int, command: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -269,4 +274,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

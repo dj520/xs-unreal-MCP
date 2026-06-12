@@ -71,7 +71,8 @@ python -m venv .venv
 ## 5. Configure Your MCP Client
 
 Copy `.mcp.json.example` into your client configuration and adjust the path if
-you installed the repository somewhere else.
+you installed the repository somewhere else. Use `.mcp.all.json.example` if you
+want the full 294-tool profile.
 
 ```json
 {
@@ -115,6 +116,26 @@ find_nodes
 ...
 cleanup_graph
 ```
+
+To verify every supported profile:
+
+```powershell
+cd D:/xs-unreal-MCP
+python scripts/check_profiles.py
+```
+
+Expected profile counts:
+
+| Profile | Tool count |
+| --- | ---: |
+| `slim` | 22 |
+| `full` | 23 |
+| `blueprint_plus` | 51 |
+| `editor_plus` | 86 |
+| `data_ui` | 82 |
+| `fx_material` | 101 |
+| `ai_anim` | 96 |
+| `all` | 294 |
 
 ## 7. Verify Against a Running Editor
 

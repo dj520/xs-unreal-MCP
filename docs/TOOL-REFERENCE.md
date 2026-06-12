@@ -2,6 +2,10 @@
 
 Slim mode exposes exactly 22 tools.
 
+Extended profile details are in `docs/EXTENDED-TOOLS.md`. Extended tools use
+domain-prefixed names and accept a single `params` object matching the upstream
+UnrealMCP tool arguments.
+
 | # | Tool | Backend command | Default port | Required inputs | Purpose |
 | --- | --- | --- | --- | --- | --- |
 | 1 | `find_nodes` | `find_blueprint_nodes` | `55558` | `blueprint_name` | Find nodes in a Blueprint graph. |
