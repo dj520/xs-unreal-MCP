@@ -1,0 +1,20 @@
+[project]
+name = "xs-unreal-mcp"
+version = "0.1.0"
+description = "Slim MCP facade for Unreal Editor TCP backends."
+readme = "../README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "mcp[cli]>=1.0.0",
+]
+
+[project.scripts]
+xs-unreal-mcp = "xs_unreal_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["xs_unreal_mcp"]
+

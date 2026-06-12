@@ -1,0 +1,103 @@
+﻿diff --git a/Source/UEBlueprintMCP/Private/Actions/EditorAction.cpp b/Source/UEBlueprintMCP/Private/Actions/EditorAction.cpp
+index 529aad9..9819ce0 100644
+--- a/Source/UEBlueprintMCP/Private/Actions/EditorAction.cpp
++++ b/Source/UEBlueprintMCP/Private/Actions/EditorAction.cpp
+@@ -218,6 +218,57 @@ UEdGraph* FEditorAction::FindGraph(UBlueprint* Blueprint, const FString& GraphNa
+ 		}
+ 	}
+ 
++	// Search macro graphs. Upstream did not include MacroGraphs here,
++	// so named macro graphs could not be resolved by node-editing commands.
++	for (UEdGraph* Graph : Blueprint->MacroGraphs)
++	{
++		if (Graph && Graph->GetFName().ToString() == GraphName)
++		{
++			return Graph;
++		}
++	}
++
++	// Search delegate signature graphs.
++	for (UEdGraph* Graph : Blueprint->DelegateSignatureGraphs)
++	{
++		if (Graph && Graph->GetFName().ToString() == GraphName)
++		{
++			return Graph;
++		}
++	}
++
++	// Search intermediate generated graphs.
++	for (UEdGraph* Graph : Blueprint->IntermediateGeneratedGraphs)
++	{
++		if (Graph && Graph->GetFName().ToString() == GraphName)
++		{
++			return Graph;
++		}
++	}
++
++	// Search composite/collapsed sub-graphs. These are often BoundGraph children
++	// under a parent graph rather than entries in the top-level graph arrays.
++	// GetAllChildrenGraphs recursively covers nested collapsed graphs.
++	{
++		TArray<UEdGraph*> Roots;
++		Roots.Append(Blueprint->UbergraphPages);
++		Roots.Append(Blueprint->FunctionGraphs);
++		Roots.Append(Blueprint->MacroGraphs);
++		for (UEdGraph* Root : Roots)
++		{
++			if (!Root) { continue; }
++			TArray<UEdGraph*> Children;
++			Root->GetAllChildrenGraphs(Children);
++			for (UEdGraph* Child : Children)
++			{
++				if (Child && Child->GetFName().ToString() == GraphName)
++				{
++					return Child;
++				}
++			}
++		}
++	}
++
+ 	OutError = FString::Printf(TEXT("Graph '%s' not found in Blueprint '%s'"), *GraphName, *Blueprint->GetName());
+ 	return nullptr;
+ }
+diff --git a/Source/UEBlueprintMCP/Private/MCPCommonUtils.cpp b/Source/UEBlueprintMCP/Private/MCPCommonUtils.cpp
+index 73e64fd..054a8d2 100644
+--- a/Source/UEBlueprintMCP/Private/MCPCommonUtils.cpp
++++ b/Source/UEBlueprintMCP/Private/MCPCommonUtils.cpp
+@@ -185,6 +185,36 @@ UEdGraph* FMCPCommonUtils::FindGraphByName(UBlueprint* Blueprint, const FString&
+ 		}
+ 	}
+ 
++	// Check macro graphs; keep this aligned with FEditorAction::FindGraph.
++	for (UEdGraph* Graph : Blueprint->MacroGraphs)
++	{
++		if (Graph && (Graph->GetFName() == FName(*GraphName) || Graph->GetName() == GraphName))
++		{
++			return Graph;
++		}
++	}
++
++	// Check composite/collapsed sub-graphs under parent graph SubGraphs.
++	{
++		TArray<UEdGraph*> Roots;
++		Roots.Append(Blueprint->UbergraphPages);
++		Roots.Append(Blueprint->FunctionGraphs);
++		Roots.Append(Blueprint->MacroGraphs);
++		for (UEdGraph* Root : Roots)
++		{
++			if (!Root) { continue; }
++			TArray<UEdGraph*> Children;
++			Root->GetAllChildrenGraphs(Children);
++			for (UEdGraph* Child : Children)
++			{
++				if (Child && (Child->GetFName() == FName(*GraphName) || Child->GetName() == GraphName))
++				{
++					return Child;
++				}
++			}
++		}
++	}
++
+ 	return nullptr;
+ }
+ 

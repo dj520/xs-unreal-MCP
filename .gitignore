@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Unreal generated outputs and private project content
+Binaries/
+Intermediate/
+DerivedDataCache/
+Saved/
+*.uasset
+*.umap
+
+# Local editor files
+.vscode/
+.idea/
+*.sln
+*.suo
+*.user
+
+# Local logs
+*.log
+
