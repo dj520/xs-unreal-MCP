@@ -55,6 +55,25 @@ Rechecked against the running Unreal Editor on 2026-06-13 with `scripts/live_val
 | Source command audit | Fail | Current UE plugin source did not register two upstream sound commands exposed by the extended profile: `play_sound_at_location` and `set_attenuation_property`. |
 | Niagara compile smoke check | Blocked | The validation script intentionally creates a minimal empty Niagara System; the backend correctly rejected compilation because required modules/renderers were missing. |
 
+## Extended Tool Matrix
+
+Rechecked on 2026-06-13 with `scripts/validate_extended_tool_matrix.py`.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Extended matrix size | Pass | The matrix covered all `271` extended tools in the `all` profile. |
+| Backend command coverage | Partial pass | `267` tools mapped to commands registered in the UE plugin source, `2` tools were handled by local xs adapters, and `2` tools required missing backend commands. |
+| Missing backend commands | Fail | `sound_play_sound_at_location` requires `play_sound_at_location`; `sound_set_attenuation_property` requires `set_attenuation_property`. |
+| Latest live-report correlation | Pass | The matrix correlated the newest live report and found `53` tools with exact live command coverage, `212` with same-domain smoke coverage, `5` not executed, and `1` blocked exact live command. |
+| Execution policy classification | Pass | The matrix classified tools as `read_only_auto=64`, `safe_temp_asset=49`, `requires_fixture=126`, `unsafe_skip=21`, `manual_only=7`, `manual_review=2`, and `backend_required=2`. |
+
+Run command:
+
+```powershell
+$env:XS_MCP_VALIDATE_UNREAL_PLUGIN='<UnrealMCP plugin Source path>'
+python scripts/validate_extended_tool_matrix.py
+```
+
 ## Extended Profile Checks
 
 | Check | Result | Evidence |
